@@ -1,0 +1,244 @@
+{
+    "Premier League": [
+        {
+            "year": 2022,
+            "url": "https://fbref.com/en/comps/9/2022-2023/schedule/2022-2023-Premier-League-Scores-and-Fixtures"
+        },
+        {
+            "year": 2023,
+            "url": "https://fbref.com/en/comps/9/2023-2024/schedule/2023-2024-Premier-League-Scores-and-Fixtures"
+        },
+        {
+            "year": 2024,
+            "url": "https://fbref.com/en/comps/9/2024-2025/schedule/2024-2025-Premier-League-Scores-and-Fixtures"
+        },
+        {
+            "year": 2025,
+            "url": "https://fbref.com/en/comps/9/2025-2026/schedule/2025-2026-Premier-League-Scores-and-Fixtures"
+        },
+        {
+            "year": 2026,
+            "url": "https://fbref.com/en/comps/9/2026-2027/schedule/2026-2027-Premier-League-Scores-and-Fixtures"
+        }
+    ],
+    "La Liga": [
+        {
+            "year": 2022,
+            "url": "https://fbref.com/en/comps/12/2022-2023/schedule/2022-2023-La-Liga-Scores-and-Fixtures"
+        },
+        {
+            "year": 2023,
+            "url": "https://fbref.com/en/comps/12/2023-2024/schedule/2023-2024-La-Liga-Scores-and-Fixtures"
+        },
+        {
+            "year": 2024,
+            "url": "https://fbref.com/en/comps/12/2024-2025/schedule/2024-2025-La-Liga-Scores-and-Fixtures"
+        },
+        {
+            "year": 2025,
+            "url": "https://fbref.com/en/comps/12/2025-2026/schedule/2025-2026-La-Liga-Scores-and-Fixtures"
+        },
+        {
+            "year": 2026,
+            "url": "https://fbref.com/en/comps/12/2026-2027/schedule/2026-2027-La-Liga-Scores-and-Fixtures"
+        }
+    ],
+    "Serie A (Italy)": [
+        {
+            "year": 2022,
+            "url": "https://fbref.com/en/comps/11/2022-2023/schedule/2022-2023-Serie-A-(Italy)-Scores-and-Fixtures"
+        },
+        {
+            "year": 2023,
+            "url": "https://fbref.com/en/comps/11/2023-2024/schedule/2023-2024-Serie-A-(Italy)-Scores-and-Fixtures"
+        },
+        {
+            "year": 2024,
+            "url": "https://fbref.com/en/comps/11/2024-2025/schedule/2024-2025-Serie-A-(Italy)-Scores-and-Fixtures"
+        },
+        {
+            "year": 2025,
+            "url": "https://fbref.com/en/comps/11/2025-2026/schedule/2025-2026-Serie-A-(Italy)-Scores-and-Fixtures"
+        },
+        {
+            "year": 2026,
+            "url": "https://fbref.com/en/comps/11/2026-2027/schedule/2026-2027-Serie-A-(Italy)-Scores-and-Fixtures"
+        }
+    ],
+    "Bundesliga": [
+        {
+            "year": 2022,
+            "url": "https://fbref.com/en/comps/20/2022-2023/schedule/2022-2023-Bundesliga-Scores-and-Fixtures"
+        },
+        {
+            "year": 2023,
+            "url": "https://fbref.com/en/comps/20/2023-2024/schedule/2023-2024-Bundesliga-Scores-and-Fixtures"
+        },
+        {
+            "year": 2024,
+            "url": "https://fbref.com/en/comps/20/2024-2025/schedule/2024-2025-Bundesliga-Scores-and-Fixtures"
+        },
+        {
+            "year": 2025,
+            "url": "https://fbref.com/en/comps/20/2025-2026/schedule/2025-2026-Bundesliga-Scores-and-Fixtures"
+        },
+        {
+            "year": 2026,
+            "url": "https://fbref.com/en/comps/20/2026-2027/schedule/2026-2027-Bundesliga-Scores-and-Fixtures"
+        }
+    ],
+    "Ligue 1": [
+        {
+            "year": 2022,
+            "url": "https://fbref.com/en/comps/13/2022-2023/schedule/2022-2023-Ligue-1-Scores-and-Fixtures"
+        },
+        {
+            "year": 2023,
+            "url": "https://fbref.com/en/comps/13/2023-2024/schedule/2023-2024-Ligue-1-Scores-and-Fixtures"
+        },
+        {
+            "year": 2024,
+            "url": "https://fbref.com/en/comps/13/2024-2025/schedule/2024-2025-Ligue-1-Scores-and-Fixtures"
+        },
+        {
+            "year": 2025,
+            "url": "https://fbref.com/en/comps/13/2025-2026/schedule/2025-2026-Ligue-1-Scores-and-Fixtures"
+        },
+        {
+            "year": 2026,
+            "url": "https://fbref.com/en/comps/13/2026-2027/schedule/2026-2027-Ligue-1-Scores-and-Fixtures"
+        }
+    ],
+    "Champions League": [
+        {
+            "year": 2022,
+            "url": "https://fbref.com/en/comps/8/2022-2023/schedule/2022-2023-Champions-League-Scores-and-Fixtures"
+        },
+        {
+            "year": 2023,
+            "url": "https://fbref.com/en/comps/8/2023-2024/schedule/2023-2024-Champions-League-Scores-and-Fixtures"
+        },
+        {
+            "year": 2024,
+            "url": "https://fbref.com/en/comps/8/2024-2025/schedule/2024-2025-Champions-League-Scores-and-Fixtures"
+        },
+        {
+            "year": 2025,
+            "url": "https://fbref.com/en/comps/8/2025-2026/schedule/2025-2026-Champions-League-Scores-and-Fixtures"
+        },
+        {
+            "year": 2026,
+            "url": "https://fbref.com/en/comps/8/2026-2027/schedule/2026-2027-Champions-League-Scores-and-Fixtures"
+        }
+    ],
+    "Europa League": [
+        {
+            "year": 2022,
+            "url": "https://fbref.com/en/comps/19/2022-2023/schedule/2022-2023-Europa-League-Scores-and-Fixtures"
+        },
+        {
+            "year": 2023,
+            "url": "https://fbref.com/en/comps/19/2023-2024/schedule/2023-2024-Europa-League-Scores-and-Fixtures"
+        },
+        {
+            "year": 2024,
+            "url": "https://fbref.com/en/comps/19/2024-2025/schedule/2024-2025-Europa-League-Scores-and-Fixtures"
+        },
+        {
+            "year": 2025,
+            "url": "https://fbref.com/en/comps/19/2025-2026/schedule/2025-2026-Europa-League-Scores-and-Fixtures"
+        },
+        {
+            "year": 2026,
+            "url": "https://fbref.com/en/comps/19/2026-2027/schedule/2026-2027-Europa-League-Scores-and-Fixtures"
+        }
+    ],
+    "Brasileir\u00e3o S\u00e9rie A": [
+        {
+            "year": 2022,
+            "url": "https://fbref.com/en/comps/24/2022/schedule/2022-Brasileir\u00e3o-S\u00e9rie-A-Scores-and-Fixtures"
+        },
+        {
+            "year": 2023,
+            "url": "https://fbref.com/en/comps/24/2023/schedule/2023-Brasileir\u00e3o-S\u00e9rie-A-Scores-and-Fixtures"
+        },
+        {
+            "year": 2024,
+            "url": "https://fbref.com/en/comps/24/2024/schedule/2024-Brasileir\u00e3o-S\u00e9rie-A-Scores-and-Fixtures"
+        },
+        {
+            "year": 2025,
+            "url": "https://fbref.com/en/comps/24/2025/schedule/2025-Brasileir\u00e3o-S\u00e9rie-A-Scores-and-Fixtures"
+        },
+        {
+            "year": 2026,
+            "url": "https://fbref.com/en/comps/24/2026/schedule/2026-Brasileir\u00e3o-S\u00e9rie-A-Scores-and-Fixtures"
+        }
+    ],
+    "Copa do Brasil": [
+        {
+            "year": 2022,
+            "url": "https://fbref.com/en/comps/271/2022/schedule/2022-Copa-do-Brasil-Scores-and-Fixtures"
+        },
+        {
+            "year": 2023,
+            "url": "https://fbref.com/en/comps/271/2023/schedule/2023-Copa-do-Brasil-Scores-and-Fixtures"
+        },
+        {
+            "year": 2024,
+            "url": "https://fbref.com/en/comps/271/2024/schedule/2024-Copa-do-Brasil-Scores-and-Fixtures"
+        },
+        {
+            "year": 2025,
+            "url": "https://fbref.com/en/comps/271/2025/schedule/2025-Copa-do-Brasil-Scores-and-Fixtures"
+        },
+        {
+            "year": 2026,
+            "url": "https://fbref.com/en/comps/271/2026/schedule/2026-Copa-do-Brasil-Scores-and-Fixtures"
+        }
+    ],
+    "Paulista A1": [
+        {
+            "year": 2022,
+            "url": "https://fbref.com/en/comps/632/2022/schedule/2022-Paulista-A1-Scores-and-Fixtures"
+        },
+        {
+            "year": 2023,
+            "url": "https://fbref.com/en/comps/632/2023/schedule/2023-Paulista-A1-Scores-and-Fixtures"
+        },
+        {
+            "year": 2024,
+            "url": "https://fbref.com/en/comps/632/2024/schedule/2024-Paulista-A1-Scores-and-Fixtures"
+        },
+        {
+            "year": 2025,
+            "url": "https://fbref.com/en/comps/632/2025/schedule/2025-Paulista-A1-Scores-and-Fixtures"
+        },
+        {
+            "year": 2026,
+            "url": "https://fbref.com/en/comps/632/2026/schedule/2026-Paulista-A1-Scores-and-Fixtures"
+        }
+    ],
+    "Carioca A1": [
+        {
+            "year": 2022,
+            "url": "https://fbref.com/en/comps/633/2022/schedule/2022-Carioca-A1-Scores-and-Fixtures"
+        },
+        {
+            "year": 2023,
+            "url": "https://fbref.com/en/comps/633/2023/schedule/2023-Carioca-A1-Scores-and-Fixtures"
+        },
+        {
+            "year": 2024,
+            "url": "https://fbref.com/en/comps/633/2024/schedule/2024-Carioca-A1-Scores-and-Fixtures"
+        },
+        {
+            "year": 2025,
+            "url": "https://fbref.com/en/comps/633/2025/schedule/2025-Carioca-A1-Scores-and-Fixtures"
+        },
+        {
+            "year": 2026,
+            "url": "https://fbref.com/en/comps/633/2026/schedule/2026-Carioca-A1-Scores-and-Fixtures"
+        }
+    ]
+}

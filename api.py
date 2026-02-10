@@ -8,9 +8,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Football Stats API", description="API independente para estatísticas de futebol global")
+app = FastAPI(title="Football Stats API", description="API independente para estatísticas de futebol global (2022-2026)")
 
-# Configuração de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,6 +21,7 @@ app.add_middleware(
 class MatchResponse(BaseModel):
     id: int
     league: str
+    season: str
     date: str
     home_team: str
     away_team: str
@@ -35,35 +35,34 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.on_event("startup")
-async def startup_event():
-    logger.info("API Iniciando na porta 8000...")
-
 @app.get("/")
 def read_root():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT name FROM leagues")
     leagues = [row["name"] for row in cursor.fetchall()]
+    cursor.execute("SELECT DISTINCT season FROM matches WHERE season IS NOT NULL")
+    seasons = [row["season"] for row in cursor.fetchall()]
     conn.close()
     return {
         "message": "Bem-vindo à API de Estatísticas de Futebol Global!",
         "status": "Online",
         "ligas_disponiveis": leagues,
+        "temporadas_disponiveis": seasons,
         "endpoints": {
-            "matches": "/matches?league=Premier League&limit=10",
+            "matches": "/matches?league=Premier League&season=2022-2023",
             "team_stats": "/stats/team/{team_name}?last_n=15",
-            "zero_zero_stats": "/stats/0x0?league=La Liga"
+            "zero_zero_stats": "/stats/0x0?league=La Liga&season=2024"
         }
     }
 
 @app.get("/matches", response_model=List[MatchResponse])
-def get_matches(league: Optional[str] = None, limit: int = 10):
+def get_matches(league: Optional[str] = None, season: Optional[str] = None, limit: int = 10):
     conn = get_db_connection()
     cursor = conn.cursor()
     
     query = '''
-        SELECT m.id, l.name as league, m.date, t1.name as home_team, t2.name as away_team, 
+        SELECT m.id, l.name as league, m.season, m.date, t1.name as home_team, t2.name as away_team, 
                m.home_score, m.away_score, s.home_corners, s.away_corners,
                s.home_yellow_cards, s.away_yellow_cards
         FROM matches m
@@ -71,11 +70,15 @@ def get_matches(league: Optional[str] = None, limit: int = 10):
         JOIN teams t1 ON m.home_team_id = t1.id
         JOIN teams t2 ON m.away_team_id = t2.id
         JOIN match_stats s ON m.id = s.match_id
+        WHERE 1=1
     '''
     params = []
     if league:
-        query += " WHERE l.name LIKE ?"
+        query += " AND l.name LIKE ?"
         params.append(f"%{league}%")
+    if season:
+        query += " AND m.season = ?"
+        params.append(season)
     
     query += " ORDER BY m.date DESC LIMIT ?"
     params.append(limit)
@@ -89,6 +92,7 @@ def get_matches(league: Optional[str] = None, limit: int = 10):
         results.append({
             "id": row["id"],
             "league": row["league"],
+            "season": row["season"] if row["season"] else "N/A",
             "date": row["date"],
             "home_team": row["home_team"],
             "away_team": row["away_team"],
@@ -100,7 +104,7 @@ def get_matches(league: Optional[str] = None, limit: int = 10):
     return results
 
 @app.get("/stats/0x0")
-def get_zero_zero_stats(league: Optional[str] = None):
+def get_zero_zero_stats(league: Optional[str] = None, season: Optional[str] = None):
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -109,11 +113,14 @@ def get_zero_zero_stats(league: Optional[str] = None):
     if league:
         query += " AND l.name LIKE ?"
         params.append(f"%{league}%")
+    if season:
+        query += " AND m.season = ?"
+        params.append(season)
         
     cursor.execute(query, params)
     count = cursor.fetchone()[0]
     conn.close()
-    return {"league": league if league else "Todas", "total_jogos_0x0": count}
+    return {"league": league if league else "Todas", "season": season if season else "Todas", "total_jogos_0x0": count}
 
 @app.get("/stats/team/{team_name}")
 def get_team_stats(team_name: str, last_n: int = 15):
