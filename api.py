@@ -3,19 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 from typing import List, Optional
 from pydantic import BaseModel
-
-app = FastAPI(title="Football Stats API", description="API independente para estatísticas de futebol")
-
 import logging
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-@app.on_event("startup")
-async def startup_event():
-    logger.info("API Iniciando na porta 8000...")
+app = FastAPI(title="Football Stats API", description="API independente para estatísticas de futebol global")
 
-
-# Configuração de CORS para permitir acesso de outros domínios (como sites criados pelo Manus)
+# Configuração de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -40,22 +35,33 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+@app.on_event("startup")
+async def startup_event():
+    logger.info("API Iniciando na porta 8000...")
+
 @app.get("/")
 def read_root():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM leagues")
+    leagues = [row["name"] for row in cursor.fetchall()]
+    conn.close()
     return {
-        "message": "Bem-vindo à API de Estatísticas de Futebol!",
+        "message": "Bem-vindo à API de Estatísticas de Futebol Global!",
         "status": "Online",
+        "ligas_disponiveis": leagues,
         "endpoints": {
-            "matches": "/matches",
-            "team_stats": "/stats/team/{team_name}",
-            "zero_zero_stats": "/stats/0x0"
+            "matches": "/matches?league=Premier League&limit=10",
+            "team_stats": "/stats/team/{team_name}?last_n=15",
+            "zero_zero_stats": "/stats/0x0?league=La Liga"
         }
     }
 
 @app.get("/matches", response_model=List[MatchResponse])
-def get_matches(limit: int = 10):
+def get_matches(league: Optional[str] = None, limit: int = 10):
     conn = get_db_connection()
     cursor = conn.cursor()
+    
     query = '''
         SELECT m.id, l.name as league, m.date, t1.name as home_team, t2.name as away_team, 
                m.home_score, m.away_score, s.home_corners, s.away_corners,
@@ -65,10 +71,16 @@ def get_matches(limit: int = 10):
         JOIN teams t1 ON m.home_team_id = t1.id
         JOIN teams t2 ON m.away_team_id = t2.id
         JOIN match_stats s ON m.id = s.match_id
-        ORDER BY m.date DESC
-        LIMIT ?
     '''
-    cursor.execute(query, (limit,))
+    params = []
+    if league:
+        query += " WHERE l.name LIKE ?"
+        params.append(f"%{league}%")
+    
+    query += " ORDER BY m.date DESC LIMIT ?"
+    params.append(limit)
+    
+    cursor.execute(query, params)
     rows = cursor.fetchall()
     conn.close()
     
@@ -88,13 +100,20 @@ def get_matches(limit: int = 10):
     return results
 
 @app.get("/stats/0x0")
-def get_zero_zero_stats():
+def get_zero_zero_stats(league: Optional[str] = None):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM matches WHERE home_score = 0 AND away_score = 0")
+    
+    query = "SELECT COUNT(*) FROM matches m JOIN leagues l ON m.league_id = l.id WHERE home_score = 0 AND away_score = 0"
+    params = []
+    if league:
+        query += " AND l.name LIKE ?"
+        params.append(f"%{league}%")
+        
+    cursor.execute(query, params)
     count = cursor.fetchone()[0]
     conn.close()
-    return {"total_jogos_0x0": count}
+    return {"league": league if league else "Todas", "total_jogos_0x0": count}
 
 @app.get("/stats/team/{team_name}")
 def get_team_stats(team_name: str, last_n: int = 15):
