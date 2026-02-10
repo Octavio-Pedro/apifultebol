@@ -6,6 +6,15 @@ from pydantic import BaseModel
 
 app = FastAPI(title="Football Stats API", description="API independente para estatísticas de futebol")
 
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("API Iniciando na porta 8000...")
+
+
 # Configuração de CORS para permitir acesso de outros domínios (como sites criados pelo Manus)
 app.add_middleware(
     CORSMiddleware,
