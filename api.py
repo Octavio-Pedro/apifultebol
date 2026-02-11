@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
@@ -19,7 +20,7 @@ app.add_middleware(
 )
 
 class MatchResponse(BaseModel):
-    id: int
+    id: str
     league: str
     season: str
     date: str
@@ -39,20 +40,26 @@ def get_db_connection():
 def read_root():
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT name FROM leagues")
-    leagues = [row["name"] for row in cursor.fetchall()]
-    cursor.execute("SELECT DISTINCT season FROM matches WHERE season IS NOT NULL")
-    seasons = [row["season"] for row in cursor.fetchall()]
-    conn.close()
+    try:
+        cursor.execute("SELECT DISTINCT league FROM matches")
+        leagues = [row["league"] for row in cursor.fetchall()]
+        cursor.execute("SELECT DISTINCT season FROM matches WHERE season IS NOT NULL")
+        seasons = [row["season"] for row in cursor.fetchall()]
+    except Exception as e:
+        logger.error(f"Erro ao ler banco: {e}")
+        leagues, seasons = [], []
+    finally:
+        conn.close()
+        
     return {
         "message": "Bem-vindo à API de Estatísticas de Futebol Global!",
         "status": "Online",
         "ligas_disponiveis": leagues,
         "temporadas_disponiveis": seasons,
         "endpoints": {
-            "matches": "/matches?league=Premier League&season=2022-2023",
+            "matches": "/matches?league=Premier League&season=2024-2025",
             "team_stats": "/stats/team/{team_name}?last_n=15",
-            "zero_zero_stats": "/stats/0x0?league=La Liga&season=2024"
+            "zero_zero_stats": "/stats/0x0?league=La Liga&season=2022-2023"
         }
     }
 
@@ -62,35 +69,37 @@ def get_matches(league: Optional[str] = None, season: Optional[str] = None, limi
     cursor = conn.cursor()
     
     query = '''
-        SELECT m.id, l.name as league, m.season, m.date, t1.name as home_team, t2.name as away_team, 
-               m.home_score, m.away_score, s.home_corners, s.away_corners,
-               s.home_yellow_cards, s.away_yellow_cards
-        FROM matches m
-        JOIN leagues l ON m.league_id = l.id
-        JOIN teams t1 ON m.home_team_id = t1.id
-        JOIN teams t2 ON m.away_team_id = t2.id
-        JOIN match_stats s ON m.id = s.match_id
+        SELECT id, league, season, date, home_team, away_team, 
+               home_score, away_score, home_corners, away_corners,
+               home_yellow_cards, away_yellow_cards, home_red_cards, away_red_cards
+        FROM matches
         WHERE 1=1
     '''
     params = []
     if league:
-        query += " AND l.name LIKE ?"
+        query += " AND league LIKE ?"
         params.append(f"%{league}%")
     if season:
-        query += " AND m.season = ?"
+        query += " AND season = ?"
         params.append(season)
     
-    query += " ORDER BY m.date DESC LIMIT ?"
+    query += " ORDER BY date DESC LIMIT ?"
     params.append(limit)
     
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
+    try:
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+    except Exception as e:
+        logger.error(f"Erro na query: {e}")
+        conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
+        
     conn.close()
     
     results = []
     for row in rows:
         results.append({
-            "id": row["id"],
+            "id": str(row["id"]),
             "league": row["league"],
             "season": row["season"] if row["season"] else "N/A",
             "date": row["date"],
@@ -99,7 +108,12 @@ def get_matches(league: Optional[str] = None, season: Optional[str] = None, limi
             "home_score": row["home_score"],
             "away_score": row["away_score"],
             "corners": {"home": row["home_corners"], "away": row["away_corners"]},
-            "cards": {"home_yellow": row["home_yellow_cards"], "away_yellow": row["away_yellow_cards"]}
+            "cards": {
+                "home_yellow": row["home_yellow_cards"], 
+                "away_yellow": row["away_yellow_cards"],
+                "home_red": row["home_red_cards"],
+                "away_red": row["away_red_cards"]
+            }
         })
     return results
 
@@ -108,13 +122,13 @@ def get_zero_zero_stats(league: Optional[str] = None, season: Optional[str] = No
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    query = "SELECT COUNT(*) FROM matches m JOIN leagues l ON m.league_id = l.id WHERE home_score = 0 AND away_score = 0"
+    query = "SELECT COUNT(*) FROM matches WHERE home_score = 0 AND away_score = 0"
     params = []
     if league:
-        query += " AND l.name LIKE ?"
+        query += " AND league LIKE ?"
         params.append(f"%{league}%")
     if season:
-        query += " AND m.season = ?"
+        query += " AND season = ?"
         params.append(season)
         
     cursor.execute(query, params)
@@ -127,39 +141,42 @@ def get_team_stats(team_name: str, last_n: int = 15):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT id FROM teams WHERE name LIKE ?", (f"%{team_name}%",))
-    team = cursor.fetchone()
-    if not team:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Time não encontrado")
-    
-    team_id = team[0]
-    
+    # Buscar jogos onde o time participou
     query = '''
         SELECT 
-            COUNT(*) as total_jogos,
-            SUM(CASE WHEN home_team_id = ? THEN home_corners ELSE away_corners END) as total_escanteios,
-            AVG(CASE WHEN home_team_id = ? THEN home_corners ELSE away_corners END) as media_escanteios
-        FROM (
-            SELECT m.id, m.home_team_id, s.home_corners, s.away_corners
-            FROM matches m
-            JOIN match_stats s ON m.id = s.match_id
-            WHERE m.home_team_id = ? OR m.away_team_id = ?
-            ORDER BY m.date DESC
-            LIMIT ?
-        )
+            home_team, away_team, home_score, away_score, 
+            home_corners, away_corners, home_team == ? as is_home
+        FROM matches
+        WHERE home_team LIKE ? OR away_team LIKE ?
+        ORDER BY date DESC
+        LIMIT ?
     '''
-    cursor.execute(query, (team_id, team_id, team_id, team_id, last_n))
-    result = cursor.fetchone()
+    search_term = f"%{team_name}%"
+    cursor.execute(query, (team_name, search_term, search_term, last_n))
+    rows = cursor.fetchall()
     conn.close()
+    
+    if not rows:
+        raise HTTPException(status_code=404, detail="Time não encontrado ou sem jogos registrados")
+    
+    total_escanteios = 0
+    jogos_analisados = len(rows)
+    
+    for row in rows:
+        if row['is_home']:
+            total_escanteios += (row['home_corners'] or 0)
+        else:
+            total_escanteios += (row['away_corners'] or 0)
+            
+    media_escanteios = total_escanteios / jogos_analisados if jogos_analisados > 0 else 0
     
     return {
         "team": team_name,
-        "periodo": f"últimos {last_n} jogos",
+        "periodo": f"últimos {jogos_analisados} jogos",
         "estatisticas": {
-            "jogos_analisados": result["total_jogos"],
-            "total_escanteios": result["total_escanteios"],
-            "media_escanteios": round(result["media_escanteios"], 2) if result["media_escanteios"] else 0
+            "jogos_analisados": jogos_analisados,
+            "total_escanteios": total_escanteios,
+            "media_escanteios": round(media_escanteios, 2)
         }
     }
 
