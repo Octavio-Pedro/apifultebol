@@ -3,3 +3,4 @@ uvicorn
 pydantic
 requests
 beautifulsoup4
+psycopg2-binary

@@ -1,7 +1,9 @@
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import os
 from typing import List, Optional
 from pydantic import BaseModel
 import logging
@@ -19,6 +21,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# URL de conexão fornecida pelo usuário (pode ser configurada via variável de ambiente DATABASE_URL)
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_DRPAFgfK9y2M@ep-orange-brook-ai94k6jr-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require")
+
 class MatchResponse(BaseModel):
     id: str
     league: str
@@ -32,14 +37,17 @@ class MatchResponse(BaseModel):
     cards: dict
 
 def get_db_connection():
-    conn = sqlite3.connect('football_data.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        return conn
+    except Exception as e:
+        logger.error(f"Erro ao conectar ao PostgreSQL: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao conectar ao banco de dados")
 
 @app.get("/")
 def read_root():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
     try:
         cursor.execute("SELECT DISTINCT league FROM matches")
         leagues = [row["league"] for row in cursor.fetchall()]
@@ -53,37 +61,31 @@ def read_root():
         
     return {
         "message": "Bem-vindo à API de Estatísticas de Futebol Global!",
-        "status": "Online",
+        "status": "Online (Conectado ao Neon.tech)",
         "ligas_disponiveis": leagues,
         "temporadas_disponiveis": seasons,
         "endpoints": {
             "matches": "/matches?league=Premier League&season=2024-2025",
             "team_stats": "/stats/team/{team_name}?last_n=15",
-            "zero_zero_stats": "/stats/0x0?league=La Liga&season=2022-2023"
+            "predict": "/predict/{time_casa}/{time_fora}"
         }
     }
 
 @app.get("/matches", response_model=List[MatchResponse])
 def get_matches(league: Optional[str] = None, season: Optional[str] = None, limit: int = 10):
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
     
-    query = '''
-        SELECT id, league, season, date, home_team, away_team, 
-               home_score, away_score, home_corners, away_corners,
-               home_yellow_cards, away_yellow_cards, home_red_cards, away_red_cards
-        FROM matches
-        WHERE 1=1
-    '''
+    query = "SELECT * FROM matches WHERE 1=1"
     params = []
     if league:
-        query += " AND league LIKE ?"
+        query += " AND league ILIKE %s"
         params.append(f"%{league}%")
     if season:
-        query += " AND season = ?"
+        query += " AND season = %s"
         params.append(season)
     
-    query += " ORDER BY date DESC LIMIT ?"
+    query += " ORDER BY date DESC LIMIT %s"
     params.append(limit)
     
     try:
@@ -117,67 +119,45 @@ def get_matches(league: Optional[str] = None, season: Optional[str] = None, limi
         })
     return results
 
-@app.get("/stats/0x0")
-def get_zero_zero_stats(league: Optional[str] = None, season: Optional[str] = None):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    query = "SELECT COUNT(*) FROM matches WHERE home_score = 0 AND away_score = 0"
-    params = []
-    if league:
-        query += " AND league LIKE ?"
-        params.append(f"%{league}%")
-    if season:
-        query += " AND season = ?"
-        params.append(season)
-        
-    cursor.execute(query, params)
-    count = cursor.fetchone()[0]
-    conn.close()
-    return {"league": league if league else "Todas", "season": season if season else "Todas", "total_jogos_0x0": count}
-
 @app.get("/stats/team/{team_name}")
 def get_team_stats(team_name: str, last_n: int = 15):
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
     
-    # Buscar jogos onde o time participou
-    query = '''
-        SELECT 
-            home_team, away_team, home_score, away_score, 
-            home_corners, away_corners, home_team == ? as is_home
-        FROM matches
-        WHERE home_team LIKE ? OR away_team LIKE ?
-        ORDER BY date DESC
-        LIMIT ?
-    '''
+    query = "SELECT *, (home_team ILIKE %s) as is_home FROM matches WHERE home_team ILIKE %s OR away_team ILIKE %s ORDER BY date DESC LIMIT %s"
     search_term = f"%{team_name}%"
-    cursor.execute(query, (team_name, search_term, search_term, last_n))
+    cursor.execute(query, (search_term, search_term, search_term, last_n))
     rows = cursor.fetchall()
     conn.close()
     
     if not rows:
-        raise HTTPException(status_code=404, detail="Time não encontrado ou sem jogos registrados")
+        raise HTTPException(status_code=404, detail="Time não encontrado")
     
-    total_escanteios = 0
-    jogos_analisados = len(rows)
-    
-    for row in rows:
-        if row['is_home']:
-            total_escanteios += (row['home_corners'] or 0)
-        else:
-            total_escanteios += (row['away_corners'] or 0)
-            
-    media_escanteios = total_escanteios / jogos_analisados if jogos_analisados > 0 else 0
+    total_escanteios = sum(row["home_corners"] if row["is_home"] else row["away_corners"] for row in rows)
+    media_escanteios = total_escanteios / len(rows)
     
     return {
         "team": team_name,
-        "periodo": f"últimos {jogos_analisados} jogos",
-        "estatisticas": {
-            "jogos_analisados": jogos_analisados,
-            "total_escanteios": total_escanteios,
-            "media_escanteios": round(media_escanteios, 2)
-        }
+        "periodo": f"últimos {len(rows)} jogos",
+        "estatisticas": {"media_escanteios": round(media_escanteios, 2)}
+    }
+
+@app.get("/predict/{team_home}/{team_away}")
+def predict_match(team_home: str, team_away: str):
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    
+    def get_avg(name):
+        cursor.execute("SELECT AVG(CASE WHEN home_team ILIKE %s THEN home_corners ELSE away_corners END) as avg_c FROM matches WHERE home_team ILIKE %s OR away_team ILIKE %s", (f"%{name}%", f"%{name}%", f"%{name}%"))
+        return cursor.fetchone()["avg_c"] or 0
+
+    avg_h = get_avg(team_home)
+    avg_a = get_avg(team_away)
+    conn.close()
+    
+    return {
+        "confronto": f"{team_home} vs {team_away}",
+        "expectativa_escanteios": round(avg_h + avg_a, 2)
     }
 
 if __name__ == "__main__":

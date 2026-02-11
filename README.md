@@ -1,55 +1,41 @@
-# API Independente de Estatísticas de Futebol
+# Football Stats API - Versão Profissional (v7)
 
-Este projeto é uma solução completa para coleta, armazenamento e consulta de dados de futebol, permitindo análises complexas sem depender de APIs pagas de terceiros.
+Esta versão transforma sua API em uma plataforma robusta, automatizada e inteligente para estatísticas de futebol global (2022-2026).
 
-## Estrutura do Projeto
+## 🚀 Novidades da Versão 7
 
-| Arquivo | Descrição |
-| :--- | :--- |
-| `scraper.py` | Coletor de dados automatizado (Web Scraper) para o FBref. |
-| `browser_scraper.py` | Script auxiliar para processar dados extraídos via navegador. |
-| `api.py` | API REST desenvolvida com FastAPI para consulta dos dados. |
-| `football_data.db` | Banco de dados SQLite contendo as informações coletadas. |
+1.  **Suporte a PostgreSQL:** Migração do SQLite para um banco de dados profissional, garantindo que seus dados nunca sejam perdidos e suportando múltiplos acessos simultâneos.
+2.  **Agendamento Automático:** Script `scheduler.py` para automatizar a coleta de dados, mantendo sua base sempre atualizada sem intervenção manual.
+3.  **Motor de Predição:** Novo endpoint `/predict` que utiliza inteligência baseada em médias históricas para sugerir tendências de gols e escanteios.
 
-## Como Funciona
+## 🛠️ Configuração do Banco de Dados (PostgreSQL)
 
-1.  **Coleta**: O sistema utiliza técnicas de web scraping para extrair resultados e estatísticas de sites como o FBref.
-2.  **Armazenamento**: Os dados são normalizados e salvos em um banco de dados SQLite, estruturado para suportar consultas históricas.
-3.  **Consulta**: A API disponibiliza endpoints que realizam cálculos em tempo real (ex: médias de escanteios, contagem de resultados específicos).
+Para que a API funcione no Koyeb ou em qualquer servidor, você deve configurar as seguintes variáveis de ambiente:
 
-## Endpoints da API
+*   `DB_HOST`: Endereço do seu banco (ex: `ep-lucky-sun-123.us-east-2.aws.neon.tech`)
+*   `DB_NAME`: Nome do banco de dados
+*   `DB_USER`: Usuário do banco
+*   `DB_PASSWORD`: Senha do banco
 
-### 1. Estatísticas de Resultados Específicos
-Retorna a quantidade de jogos que terminaram em 0x0.
-- **URL**: `/stats/0x0`
-- **Método**: `GET`
+**Dica:** Recomendo usar o [Neon.tech](https://neon.tech) para um banco PostgreSQL gratuito e persistente.
 
-### 2. Estatísticas por Time
-Retorna o total e a média de escanteios de um time em um determinado período.
-- **URL**: `/stats/team/{team_name}?last_n=15`
-- **Método**: `GET`
-- **Parâmetros**: `last_n` (opcional, padrão 15) define quantos jogos recentes analisar.
+## 📈 Novos Endpoints
 
-### 3. Listagem de Partidas
-Retorna as últimas partidas com estatísticas detalhadas.
-- **URL**: `/matches?limit=10`
-- **Método**: `GET`
+### 1. Predição de Partida
+Calcula a expectativa de gols e escanteios para um confronto baseado no histórico dos dois times.
+*   **URL:** `/predict/{time_casa}/{time_fora}`
+*   **Exemplo:** `/predict/Palmeiras/Flamengo`
 
-## Exemplo de Uso (JavaScript/Frontend)
+### 2. Estatísticas de Time (Melhorado)
+Analisa o desempenho detalhado de um time nos últimos N jogos.
+*   **URL:** `/stats/team/{nome_do_time}?last_n=15`
 
-```javascript
-// Consultar quantos escanteios o Palmeiras fez nos últimos 15 jogos
-fetch('https://sua-api.com/stats/team/Palmeiras?last_n=15')
-  .then(response => response.json())
-  .then(data => {
-    console.log(`Média de escanteios: ${data.estatisticas.media_escanteios}`);
-  });
-```
+### 3. Filtros por Liga e Temporada
+*   **URL:** `/matches?league=Premier League&season=2024-2025`
 
-## Deployment
+## 🤖 Automação
 
-Para colocar a API no ar, recomenda-se o uso de um servidor VPS com Docker ou a execução direta via `uvicorn`:
-```bash
-pip install fastapi uvicorn beautifulsoup4 requests
-python api.py
-```
+O arquivo `scheduler.py` pode ser rodado como um processo separado. Ele executará o scraper periodicamente para manter seus dados sempre atualizados.
+
+---
+Desenvolvido para cobertura global de futebol (2022-2026).

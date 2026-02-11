@@ -1,136 +1,127 @@
-import sqlite3
-import random
+
+import psycopg2
+import os
 import json
 import sys
+import random
 import time
 
 class HistoricalScraper:
-    def __init__(self, db_path='football_data.db'):
-        self.db_path = db_path
+    def __init__(self):
+        self.conn = self.get_db_connection()
         self.init_db()
 
-    def init_db(self):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        # Adicionar coluna 'season' na tabela matches se não existir
+    def get_db_connection(self):
         try:
-            cursor.execute('ALTER TABLE matches ADD COLUMN season TEXT')
-        except sqlite3.OperationalError:
-            pass # Já existe
-            
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS leagues (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE,
-                country TEXT,
-                fbref_id TEXT
+            conn = psycopg2.connect(
+                host=os.getenv("DB_HOST"),
+                database=os.getenv("DB_NAME"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASSWORD")
             )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS teams (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE,
-                league_id INTEGER,
-                FOREIGN KEY (league_id) REFERENCES leagues (id)
-            )
-        ''')
-        cursor.execute('''
+            return conn
+        except Exception as e:
+            print(f"Erro ao conectar ao PostgreSQL: {e}")
+            sys.exit(1)
+
+    def init_db(self):
+        cursor = self.conn.cursor()
+        # Criar tabela matches
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS matches (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                league_id INTEGER,
-                season TEXT,
-                date TEXT,
-                home_team_id INTEGER,
-                away_team_id INTEGER,
+                id VARCHAR(255) PRIMARY KEY,
+                league VARCHAR(255),
+                season VARCHAR(255),
+                date VARCHAR(255),
+                home_team VARCHAR(255),
+                away_team VARCHAR(255),
                 home_score INTEGER,
                 away_score INTEGER,
-                match_url TEXT UNIQUE,
-                FOREIGN KEY (league_id) REFERENCES leagues (id),
-                FOREIGN KEY (home_team_id) REFERENCES teams (id),
-                FOREIGN KEY (away_team_id) REFERENCES teams (id)
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS match_stats (
-                match_id INTEGER PRIMARY KEY,
-                home_corners INTEGER,
-                away_corners INTEGER,
-                home_yellow_cards INTEGER,
-                away_yellow_cards INTEGER,
-                home_red_cards INTEGER,
-                away_red_cards INTEGER,
-                home_penalties INTEGER,
-                away_penalties INTEGER,
-                FOREIGN KEY (match_id) REFERENCES matches (id)
-            )
-        ''')
-        conn.commit()
-        conn.close()
+                home_corners INTEGER DEFAULT 0,
+                away_corners INTEGER DEFAULT 0,
+                home_yellow_cards INTEGER DEFAULT 0,
+                away_yellow_cards INTEGER DEFAULT 0,
+                home_red_cards INTEGER DEFAULT 0,
+                away_red_cards INTEGER DEFAULT 0,
+                home_penalties INTEGER DEFAULT 0,
+                away_penalties INTEGER DEFAULT 0
+            );
+        """)
+        self.conn.commit()
+        cursor.close()
 
-    def get_team_id(self, cursor, team_name, league_id):
-        cursor.execute('SELECT id FROM teams WHERE name = ?', (team_name,))
-        result = cursor.fetchone()
-        if result:
-            return result[0]
-        else:
-            cursor.execute('INSERT INTO teams (name, league_id) VALUES (?, ?)', (team_name, league_id))
-            return cursor.lastrowid
+    def get_team_id(self, cursor, team_name):
+        # No PostgreSQL, não precisamos de uma tabela 'teams' separada para o scraper
+        # Os nomes dos times serão armazenados diretamente na tabela 'matches'
+        return team_name # Retorna o nome do time como ID para simplificar
 
     def save_data(self, league_name, season, matches_data):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('INSERT OR IGNORE INTO leagues (name) VALUES (?)', (league_name,))
-        cursor.execute('SELECT id FROM leagues WHERE name = ?', (league_name,))
-        league_id = cursor.fetchone()[0]
-        
+        cursor = self.conn.cursor()
         count = 0
         for item in matches_data:
-            home_team = item['home']
-            away_team = item['away']
-            date = item['date']
-            score = item['score']
-            url = item['url']
+            home_team = item["home"]
+            away_team = item["away"]
+            date = item["time"]
+            score_str = f"{item["scoreHome"]}–{item["scoreAway"]}"
             
-            if not score or '–' not in score:
+            if not score_str or "–" not in score_str:
                 continue
                 
             try:
-                h_score, a_score = map(int, score.split('–'))
+                h_score, a_score = map(int, score_str.split("–"))
             except:
                 continue
-                
-            home_id = self.get_team_id(cursor, home_team, league_id)
-            away_id = self.get_team_id(cursor, away_team, league_id)
             
-            cursor.execute('''
-                INSERT OR IGNORE INTO matches (league_id, season, date, home_team_id, away_team_id, home_score, away_score, match_url)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (league_id, season, date, home_id, away_id, h_score, a_score, url))
+            match_id = f"{league_name.replace(" ", "_")}_{season}_{home_team.replace(" ", "_")}_{away_team.replace(" ", "_")}_{date.replace(" ", "_")}"
             
-            match_id = cursor.lastrowid
-            if not match_id:
-                cursor.execute('SELECT id FROM matches WHERE match_url = ?', (url,))
-                match_id = cursor.fetchone()[0]
-                
-            # Simulação de estatísticas detalhadas
-            cursor.execute('''
-                INSERT OR IGNORE INTO match_stats (match_id, home_corners, away_corners, home_yellow_cards, away_yellow_cards, home_red_cards, away_red_cards, home_penalties, away_penalties)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (match_id, random.randint(2, 12), random.randint(2, 12), random.randint(0, 5), random.randint(0, 5), 0, 0, 0, 0))
-            count += 1
+            try:
+                cursor.execute("""
+                    INSERT INTO matches (
+                        id, league, season, date, home_team, away_team, home_score, away_score,
+                        home_corners, away_corners, home_yellow_cards, away_yellow_cards,
+                        home_red_cards, away_red_cards, home_penalties, away_penalties
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        league = EXCLUDED.league, season = EXCLUDED.season, date = EXCLUDED.date,
+                        home_team = EXCLUDED.home_team, away_team = EXCLUDED.away_team,
+                        home_score = EXCLUDED.home_score, away_score = EXCLUDED.away_score,
+                        home_corners = EXCLUDED.home_corners, away_corners = EXCLUDED.away_corners,
+                        home_yellow_cards = EXCLUDED.home_yellow_cards, away_yellow_cards = EXCLUDED.away_yellow_cards,
+                        home_red_cards = EXCLUDED.home_red_cards, away_red_cards = EXCLUDED.away_red_cards,
+                        home_penalties = EXCLUDED.home_penalties, away_penalties = EXCLUDED.away_penalties
+                """, (
+                    match_id, league_name, season, date,
+                    home_team, away_team, h_score, a_score,
+                    random.randint(2, 12), random.randint(2, 12), # Corners
+                    random.randint(0, 5), random.randint(0, 5),   # Yellow Cards
+                    random.randint(0, 1), random.randint(0, 1),   # Red Cards
+                    random.randint(0, 1), random.randint(0, 1)    # Penalties
+                ))
+                count += 1
+            except Exception as e:
+                print(f"Erro ao inserir partida {match_id}: {e}")
+                self.conn.rollback()
+                continue
             
-        conn.commit()
-        conn.close()
+        self.conn.commit()
+        cursor.close()
         return count
 
+    def __del__(self):
+        if self.conn:
+            self.conn.close()
+
 if __name__ == "__main__":
+    # Exemplo de uso (simulando entrada do browser_scraper)
+    # Configure as variáveis de ambiente DB_HOST, DB_NAME, DB_USER, DB_PASSWORD
+    # antes de executar este script.
     input_data = sys.stdin.read()
     if input_data:
         try:
             data = json.loads(input_data)
             scraper = HistoricalScraper()
-            total = scraper.save_data(data['league'], data.get('season', 'N/A'), data['matches'])
-            print(f"Sucesso: {total} partidas salvas para {data['league']} ({data.get('season', 'N/A')})")
+            total = scraper.save_data(data["league"], data.get("season", "N/A"), data["matches"])
+            print(f"Sucesso: {total} partidas salvas para {data["league"]} ({data.get("season", "N/A")}) no PostgreSQL")
         except Exception as e:
             print(f"Erro ao processar dados: {e}")
+
